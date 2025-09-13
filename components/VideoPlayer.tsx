@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { PlayIcon } from './icons/PlayIcon';
 import { PauseIcon } from './icons/PauseIcon';
@@ -35,14 +34,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState<number>(0);
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [areControlsVisible, setAreControlsVisible] = useState<boolean>(true);
-  const [dominantColor, setDominantColor] = useState<string>('#000000');
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const backgroundVideoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<number | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  // FIX: Initialize useRef with an initial value. `useRef()` must be called with one argument.
-  const animationFrameRef = useRef<number | null>(null);
 
   const formatTime = (timeInSeconds: number): string => {
     if (isNaN(timeInSeconds) || timeInSeconds === Infinity) {
@@ -67,14 +63,18 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     controlsTimeoutRef.current = window.setTimeout(hideControls, 3000);
   }, [hideControls]);
 
-  // Effect to handle robust autoplay when src changes
+  // Effect to handle robust autoplay when src changes, syncing both videos
   useEffect(() => {
-    const video = videoRef.current;
-    if (video && src) {
-      video.load();
-      const playPromise = video.play();
+    const mainVideo = videoRef.current;
+    const bgVideo = backgroundVideoRef.current;
+    if (mainVideo && bgVideo && src) {
+      mainVideo.load();
+      bgVideo.load();
+      const playPromise = mainVideo.play();
       if (playPromise !== undefined) {
-        playPromise.catch(error => {
+        playPromise.then(() => {
+            bgVideo.play();
+        }).catch(error => {
           console.warn("Autoplay was prevented by the browser.", error);
           setIsPlaying(false);
         });
@@ -85,13 +85,26 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   // Main Event Listeners Effect
   useEffect(() => {
     const video = videoRef.current;
+    const bgVideo = backgroundVideoRef.current;
     const container = containerRef.current;
-    if (!video || !container) return;
+    if (!video || !container || !bgVideo) return;
 
-    const handleTimeUpdate = () => setProgress(video.currentTime);
+    const handleTimeUpdate = () => {
+        setProgress(video.currentTime);
+        // Defensively sync bg video just in case it drifts
+        if (Math.abs(video.currentTime - bgVideo.currentTime) > 0.5) {
+            bgVideo.currentTime = video.currentTime;
+        }
+    };
     const handleLoadedMetadata = () => setDuration(video.duration);
-    const handlePlay = () => setIsPlaying(true);
-    const handlePause = () => setIsPlaying(false);
+    const handlePlay = () => {
+        setIsPlaying(true);
+        bgVideo.play();
+    };
+    const handlePause = () => {
+        setIsPlaying(false);
+        bgVideo.pause();
+    };
     const handleFullscreenChange = () => setIsFullScreen(!!document.fullscreenElement);
 
     video.addEventListener('timeupdate', handleTimeUpdate);
@@ -118,107 +131,28 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     };
   }, [showControls, hideControls, onEnded]);
   
-  // --- Ambient Lighting Feature ---
-
-  const updateDominantColor = useCallback(() => {
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-
-    if (!video || !canvas || video.paused || video.ended || video.videoWidth === 0) {
-        if (!video || !video.paused) {
-             if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-             }
-             animationFrameRef.current = requestAnimationFrame(updateDominantColor);
-        }
-        return;
-    }
-    
-    const context = canvas.getContext('2d', { willReadFrequently: true });
-    if (!context) return;
-    
-    const width = canvas.width = 20;
-    const height = canvas.height = 20;
-    
-    context.drawImage(video, 0, 0, width, height);
-    
-    try {
-        const imageData = context.getImageData(0, 0, width, height);
-        const data = imageData.data;
-        let r = 0, g = 0, b = 0;
-        let count = 0;
-        
-        for (let i = 0; i < data.length; i += 4 * 2) { // sample every other pixel for perf
-            if (data[i] > 15 || data[i+1] > 15 || data[i+2] > 15) {
-                r += data[i];
-                g += data[i+1];
-                b += data[i+2];
-                count++;
-            }
-        }
-        
-        if (count > 0) {
-            r = Math.floor(r / count);
-            g = Math.floor(g / count);
-            b = Math.floor(b / count);
-            setDominantColor(`rgb(${r}, ${g}, ${b})`);
-        }
-    } catch (e) {
-        console.error("Could not get image data from canvas. This may be a cross-origin issue.", e);
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-        }
-        return;
-    }
-    
-    animationFrameRef.current = requestAnimationFrame(updateDominantColor);
-  }, []);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-
-    const startColorExtraction = () => {
-        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = requestAnimationFrame(updateDominantColor);
-    };
-
-    const stopColorExtraction = () => {
-        if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-        setDominantColor('#000000');
-    };
-
-    video.addEventListener('play', startColorExtraction);
-    video.addEventListener('playing', startColorExtraction);
-    video.addEventListener('pause', stopColorExtraction);
-    video.addEventListener('ended', stopColorExtraction);
-    video.addEventListener('error', stopColorExtraction);
-
-    return () => {
-        video.removeEventListener('play', startColorExtraction);
-        video.removeEventListener('playing', startColorExtraction);
-        video.removeEventListener('pause', stopColorExtraction);
-        video.removeEventListener('ended', stopColorExtraction);
-        video.removeEventListener('error', stopColorExtraction);
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-        }
-    };
-  }, [updateDominantColor]);
-
-  // --- End Ambient Lighting Feature ---
-
   const togglePlayPause = () => {
-    if (videoRef.current) {
-      videoRef.current.paused ? videoRef.current.play() : videoRef.current.pause();
+    const mainVideo = videoRef.current;
+    const bgVideo = backgroundVideoRef.current;
+    if (mainVideo && bgVideo) {
+      if (mainVideo.paused) {
+        mainVideo.play();
+        bgVideo.play();
+      } else {
+        mainVideo.pause();
+        bgVideo.pause();
+      }
     }
     showControls();
   };
 
   const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (videoRef.current) {
+    const mainVideo = videoRef.current;
+    const bgVideo = backgroundVideoRef.current;
+    if (mainVideo && bgVideo) {
       const newTime = Number(e.target.value);
-      videoRef.current.currentTime = newTime;
+      mainVideo.currentTime = newTime;
+      bgVideo.currentTime = newTime;
       setProgress(newTime);
     }
   };
@@ -258,19 +192,22 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   return (
     <div 
       ref={containerRef} 
-      className="relative w-full h-full group transition-colors duration-1000" 
-      style={{ backgroundColor: dominantColor }}
+      className="relative w-full h-full group bg-black overflow-hidden"
       onMouseMove={showControls}
     >
       <video
+        ref={backgroundVideoRef}
+        src={src}
+        className="absolute top-0 left-0 w-full h-full object-cover blur-2xl scale-110 brightness-50 pointer-events-none"
+        muted
+      />
+      <video
         ref={videoRef}
         src={src}
-        className="w-full h-full object-contain"
+        className="relative w-full h-full object-contain"
         onClick={togglePlayPause}
         onLoadedData={() => showControls()}
-        crossOrigin="anonymous"
       />
-      <canvas ref={canvasRef} className="hidden" />
 
       <div 
         className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isPlaying ? 'opacity-0' : 'opacity-100'} bg-black bg-opacity-30`}
