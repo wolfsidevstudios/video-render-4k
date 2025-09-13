@@ -6,7 +6,6 @@ import { TrashIcon } from './icons/TrashIcon';
 interface MobileControlsProps {
     activeTab: 'playlist' | 'actions';
     setActiveTab: (tab: 'playlist' | 'actions') => void;
-    isProcessing: boolean;
     onFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
     onClearPlaylist: () => void;
     playlistEmpty: boolean;
@@ -15,7 +14,6 @@ interface MobileControlsProps {
 export const MobileControls: React.FC<MobileControlsProps> = ({ 
     activeTab, 
     setActiveTab,
-    isProcessing,
     onFileUpload,
     onClearPlaylist,
     playlistEmpty
@@ -38,11 +36,11 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
             </div>
              {activeTab === 'actions' && (
                 <div className="p-4 bg-slate-800/50 flex flex-col sm:flex-row gap-4">
-                    <label htmlFor="file-upload-mobile" className={`flex-1 text-center cursor-pointer bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 flex items-center justify-center ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <label htmlFor="file-upload-mobile" className="flex-1 text-center cursor-pointer bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 flex items-center justify-center">
                         <PlusIcon className="w-5 h-5 mr-2" />
-                        {isProcessing ? 'Processing...' : 'Add Files'}
+                        Add Files
                     </label>
-                    <input id="file-upload-mobile" type="file" accept="video/*,image/*" multiple onChange={onFileUpload} className="hidden" disabled={isProcessing} />
+                    <input id="file-upload-mobile" type="file" accept="video/*,image/*" multiple onChange={onFileUpload} className="hidden" />
 
                     <button 
                         onClick={onClearPlaylist} 

@@ -24,7 +24,6 @@ const App: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isReady, setIsReady] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [activeMobileTab, setActiveMobileTab] = useState<'playlist' | 'actions'>('playlist');
 
   // Load playlist from storage on initial mount
@@ -73,33 +72,39 @@ const App: React.FC = () => {
     };
   }, [playlist]);
 
-  const handleFileProcessing = useCallback(async (files: FileList) => {
+  const handleFileProcessing = useCallback((files: FileList) => {
     if (!files || files.length === 0) return;
-    setIsProcessing(true);
-    try {
-      const fileArray = Array.from(files);
-      const processingPromises = fileArray.map(async (file): Promise<PlaylistItem | null> => {
-        const fileType = file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : null;
-        if (!fileType) return null;
+
+    const fileArray = Array.from(files);
+    const newItems: PlaylistItem[] = [];
+    const filesToSave: { id: number; blob: File }[] = [];
+
+    for (const file of fileArray) {
+      const fileType = file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : null;
+      if (fileType) {
         const id = generateUniqueId();
-        await db.files.put({ id, blob: file });
-        return { id, src: URL.createObjectURL(file), title: file.name, type: fileType };
-      });
-      const results = await Promise.all(processingPromises);
-      const newItems = results.filter((item): item is PlaylistItem => item !== null);
-      if (newItems.length > 0) {
-        setPlaylist(prev => [...prev, ...newItems]);
-        if (newItems.length < fileArray.length) {
-          alert(`Added ${newItems.length} files. Some files were not valid video or image formats and were skipped.`);
-        }
-      } else {
-        alert("No valid video or image files were found in your selection.");
+        newItems.push({ id, src: URL.createObjectURL(file), title: file.name, type: fileType });
+        filesToSave.push({ id, blob: file });
       }
-    } catch (error) {
-      console.error("Failed to process and save files:", error);
-      alert("An error occurred while adding your files.");
-    } finally {
-      setIsProcessing(false);
+    }
+    
+    if (newItems.length > 0) {
+      setPlaylist(prev => [...prev, ...newItems]);
+
+      // Save to DB in the background without blocking UI
+      (async () => {
+        try {
+          await db.files.bulkPut(filesToSave);
+        } catch (error) {
+          console.error("Failed to save files to database in background:", error);
+        }
+      })();
+
+      if (newItems.length < fileArray.length) {
+        alert(`Added ${newItems.length} files. Some files were not valid video or image formats and were skipped.`);
+      }
+    } else {
+      alert("No valid video or image files were found in your selection.");
     }
   }, []);
 
@@ -191,10 +196,10 @@ const App: React.FC = () => {
         <aside className="lg:w-1/3 flex flex-col bg-slate-900/70 border-t-2 lg:border-t-0 lg:border-l-2 border-slate-700">
           {/* Desktop View */}
           <div className="hidden lg:flex flex-col h-full p-4 space-y-4">
-            <label htmlFor="file-upload-desktop" className={`w-full text-center cursor-pointer bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 flex items-center justify-center ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                {isProcessing ? 'Processing...' : 'Add Files'}
+            <label htmlFor="file-upload-desktop" className="w-full text-center cursor-pointer bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 flex items-center justify-center">
+                Add Files
             </label>
-            <input id="file-upload-desktop" type="file" accept="video/*,image/*" multiple onChange={handleFileUpload} className="hidden" disabled={isProcessing} />
+            <input id="file-upload-desktop" type="file" accept="video/*,image/*" multiple onChange={handleFileUpload} className="hidden" />
             <Playlist videos={playlist} currentIndex={currentIndex} onSelectVideo={handleSelectVideo} title="Up Next"/>
             <div className="mt-auto flex-shrink-0 pt-4 border-t border-slate-700">
                <button onClick={handleClearPlaylist} disabled={playlist.length === 0} className="w-full text-center bg-red-800/80 hover:bg-red-700 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors">
@@ -208,7 +213,6 @@ const App: React.FC = () => {
             <MobileControls
               activeTab={activeMobileTab}
               setActiveTab={setActiveMobileTab}
-              isProcessing={isProcessing}
               onFileUpload={handleFileUpload}
               onClearPlaylist={handleClearPlaylist}
               playlistEmpty={playlist.length === 0}

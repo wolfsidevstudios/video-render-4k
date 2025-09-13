@@ -10,9 +10,6 @@ export class AppDatabase extends Dexie {
 
   constructor() {
     super('multimedia-slideshow');
-    this.version(1).stores({
-      files: 'id'
-    });
   }
 
   async clearAll() {
@@ -21,3 +18,10 @@ export class AppDatabase extends Dexie {
 }
 
 export const db = new AppDatabase();
+
+// Fix for: Property 'version' does not exist on type 'AppDatabase'.
+// Moved schema definition out of the constructor to avoid potential `this` typing
+// issues within the class constructor.
+db.version(1).stores({
+  files: 'id'
+});
