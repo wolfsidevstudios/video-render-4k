@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import VideoPlayer from './components/VideoPlayer';
 import Playlist from './components/Playlist';
 import ImageViewer from './components/ImageViewer';
 import { MobileControls } from './components/MobileControls';
+import MemoryCreator from './components/MemoryCreator';
+import { SparklesIcon } from './components/icons/SparklesIcon';
 import { db } from './lib/db';
 
 export interface PlaylistItem {
@@ -25,6 +27,9 @@ const App: React.FC = () => {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [activeMobileTab, setActiveMobileTab] = useState<'playlist' | 'actions'>('playlist');
+  const [isMemoryModalOpen, setIsMemoryModalOpen] = useState(false);
+
+  const videoPlaylist = useMemo(() => playlist.filter(item => item.type === 'video'), [playlist]);
 
   // Load playlist from storage on initial mount
   useEffect(() => {
@@ -197,10 +202,20 @@ const App: React.FC = () => {
         <aside className="lg:w-1/3 flex flex-col bg-gray-950/50 backdrop-blur-sm border-t-2 lg:border-t-0 lg:border-l-2 border-gray-800">
           {/* Desktop View */}
           <div className="hidden lg:flex flex-col h-full p-4 space-y-4">
-            <label htmlFor="file-upload-desktop" className="w-full text-center cursor-pointer bg-teal-500/20 hover:bg-teal-500/40 border border-teal-500/40 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all transform hover:scale-105 flex items-center justify-center">
-                Add Files
-            </label>
-            <input id="file-upload-desktop" type="file" accept="video/*,image/*" multiple onChange={handleFileUpload} className="hidden" />
+            <div className="flex gap-2">
+              <label htmlFor="file-upload-desktop" className="flex-1 text-center cursor-pointer bg-teal-500/20 hover:bg-teal-500/40 border border-teal-500/40 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all transform hover:scale-105 flex items-center justify-center">
+                  Add Files
+              </label>
+              <input id="file-upload-desktop" type="file" accept="video/*,image/*" multiple onChange={handleFileUpload} className="hidden" />
+              <button 
+                onClick={() => setIsMemoryModalOpen(true)}
+                disabled={videoPlaylist.length < 2}
+                className="text-center cursor-pointer bg-purple-500/20 hover:bg-purple-500/40 border border-purple-500/40 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all transform hover:scale-105 flex items-center justify-center disabled:bg-gray-800/50 disabled:border-gray-700 disabled:text-slate-500 disabled:cursor-not-allowed"
+                title={videoPlaylist.length < 2 ? "Add at least 2 videos to create a memory" : "Create a memory video"}
+              >
+                <SparklesIcon className="w-5 h-5" />
+              </button>
+            </div>
             <Playlist videos={playlist} currentIndex={currentIndex} onSelectVideo={handleSelectVideo} title="Up Next"/>
             <div className="mt-auto flex-shrink-0 pt-4 border-t border-gray-800">
                <button onClick={handleClearPlaylist} disabled={playlist.length === 0} className="w-full text-center bg-red-500/20 hover:bg-red-500/40 border border-red-500/40 disabled:bg-gray-800/50 disabled:border-gray-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-full transition-colors">
@@ -216,7 +231,9 @@ const App: React.FC = () => {
               setActiveTab={setActiveMobileTab}
               onFileUpload={handleFileUpload}
               onClearPlaylist={handleClearPlaylist}
+              onShowMemories={() => setIsMemoryModalOpen(true)}
               playlistEmpty={playlist.length === 0}
+              videoCount={videoPlaylist.length}
             />
             <div className="flex-grow overflow-y-auto p-2">
               {activeMobileTab === 'playlist' && (
@@ -226,6 +243,11 @@ const App: React.FC = () => {
           </div>
         </aside>
       </div>
+      <MemoryCreator 
+        isOpen={isMemoryModalOpen}
+        onClose={() => setIsMemoryModalOpen(false)}
+        videoPlaylist={videoPlaylist}
+      />
     </main>
   );
 };

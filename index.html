@@ -15,7 +15,15 @@
       body {
         font-family: 'Inter', sans-serif;
       }
+      @keyframes aurora-bg {
+        0%, 100% { transform: scale(1.1); opacity: 0.7; }
+        50% { transform: scale(1.15); opacity: 1; }
+      }
+      .animate-aurora {
+        animation: aurora-bg 8s ease-in-out infinite;
+      }
     </style>
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.0/dist/ffmpeg.min.js"></script>
   <script type="importmap">
 {
   "imports": {
