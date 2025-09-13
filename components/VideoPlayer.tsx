@@ -43,29 +43,19 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const controlsTimeoutRef = useRef<number | null>(null);
 
   const formatTime = (timeInSeconds: number): string => {
-    if (isNaN(timeInSeconds) || timeInSeconds === Infinity) {
-      return '00:00';
-    }
+    if (isNaN(timeInSeconds) || timeInSeconds === Infinity) return '00:00';
     const minutes = Math.floor(timeInSeconds / 60);
     const seconds = Math.floor(timeInSeconds % 60);
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
   };
 
-  const hideControls = useCallback(() => {
-    if (isPlaying) {
-      setAreControlsVisible(false);
-    }
-  }, [isPlaying]);
-
+  const hideControls = useCallback(() => { if (isPlaying) setAreControlsVisible(false); }, [isPlaying]);
   const showControls = useCallback(() => {
     setAreControlsVisible(true);
-    if (controlsTimeoutRef.current) {
-      clearTimeout(controlsTimeoutRef.current);
-    }
+    if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     controlsTimeoutRef.current = window.setTimeout(hideControls, 3000);
   }, [hideControls]);
 
-  // Effect to handle robust autoplay when src changes, syncing both videos
   useEffect(() => {
     const mainVideo = videoRef.current;
     const bgVideo = backgroundVideoRef.current;
@@ -74,17 +64,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       bgVideo.load();
       const playPromise = mainVideo.play();
       if (playPromise !== undefined) {
-        playPromise.then(() => {
-            bgVideo.play();
-        }).catch(error => {
-          console.warn("Autoplay was prevented by the browser.", error);
-          setIsPlaying(false);
-        });
+        playPromise.then(() => bgVideo.play()).catch(() => setIsPlaying(false));
       }
     }
   }, [src]);
 
-  // Main Event Listeners Effect
   useEffect(() => {
     const video = videoRef.current;
     const bgVideo = backgroundVideoRef.current;
@@ -92,21 +76,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (!video || !container || !bgVideo) return;
 
     const handleTimeUpdate = () => {
-        setProgress(video.currentTime);
-        // Defensively sync bg video just in case it drifts
-        if (Math.abs(video.currentTime - bgVideo.currentTime) > 0.5) {
-            bgVideo.currentTime = video.currentTime;
-        }
+      setProgress(video.currentTime);
+      if (Math.abs(video.currentTime - bgVideo.currentTime) > 0.5) bgVideo.currentTime = video.currentTime;
     };
     const handleLoadedMetadata = () => setDuration(video.duration);
-    const handlePlay = () => {
-        setIsPlaying(true);
-        bgVideo.play();
-    };
-    const handlePause = () => {
-        setIsPlaying(false);
-        bgVideo.pause();
-    };
+    const handlePlay = () => { setIsPlaying(true); bgVideo.play(); };
+    const handlePause = () => { setIsPlaying(false); bgVideo.pause(); };
     const handleFullscreenChange = () => setIsFullScreen(!!document.fullscreenElement);
 
     video.addEventListener('timeupdate', handleTimeUpdate);
@@ -127,9 +102,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
       container.removeEventListener('mousemove', showControls);
       container.removeEventListener('mouseleave', hideControls);
-      if (controlsTimeoutRef.current) {
-        clearTimeout(controlsTimeoutRef.current);
-      }
+      if (controlsTimeoutRef.current) clearTimeout(controlsTimeoutRef.current);
     };
   }, [showControls, hideControls, onEnded]);
   
@@ -137,13 +110,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const mainVideo = videoRef.current;
     const bgVideo = backgroundVideoRef.current;
     if (mainVideo && bgVideo) {
-      if (mainVideo.paused) {
-        mainVideo.play();
-        bgVideo.play();
-      } else {
-        mainVideo.pause();
-        bgVideo.pause();
-      }
+      mainVideo.paused ? mainVideo.play() : mainVideo.pause();
     }
     showControls();
   };
@@ -153,41 +120,30 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const bgVideo = backgroundVideoRef.current;
     if (mainVideo && bgVideo) {
       const newTime = Number(e.target.value);
-      mainVideo.currentTime = newTime;
-      bgVideo.currentTime = newTime;
-      setProgress(newTime);
+      mainVideo.currentTime = newTime; bgVideo.currentTime = newTime; setProgress(newTime);
     }
   };
   
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (videoRef.current) {
         const newVolume = Number(e.target.value);
-        videoRef.current.volume = newVolume;
-        setVolume(newVolume);
-        setIsMuted(newVolume === 0);
+        videoRef.current.volume = newVolume; setVolume(newVolume); setIsMuted(newVolume === 0);
     }
   };
 
   const toggleMute = () => {
     if (videoRef.current) {
         const newMutedState = !isMuted;
-        videoRef.current.muted = newMutedState;
-        setIsMuted(newMutedState);
-        if (!newMutedState) {
-          setVolume(videoRef.current.volume > 0 ? videoRef.current.volume : 0.5);
-          videoRef.current.volume = videoRef.current.volume > 0 ? videoRef.current.volume : 0.5;
+        videoRef.current.muted = newMutedState; setIsMuted(newMutedState);
+        if (!newMutedState && videoRef.current.volume === 0) {
+          videoRef.current.volume = 0.5; setVolume(0.5);
         }
     }
   };
   
   const toggleFullScreen = () => {
-    if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-        containerRef.current.requestFullscreen().catch(err => {
-            alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
-        });
-    } else {
-        document.exitFullscreen();
+    if (containerRef.current) {
+      !document.fullscreenElement ? containerRef.current.requestFullscreen() : document.exitFullscreen();
     }
   };
 
@@ -197,97 +153,33 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   };
   
   return (
-    <div 
-      ref={containerRef} 
-      className="relative w-full h-full group bg-black overflow-hidden"
-      onMouseMove={showControls}
-    >
-      <video
-        ref={backgroundVideoRef}
-        src={src}
-        className="absolute top-0 left-0 w-full h-full object-cover blur-2xl scale-110 brightness-50 pointer-events-none"
-        muted
-      />
-      <video
-        ref={videoRef}
-        src={src}
-        className={`relative w-full h-full transition-all duration-300 ${fitMode === 'contain' ? 'object-contain' : 'object-cover'}`}
-        onClick={togglePlayPause}
-        onLoadedData={() => showControls()}
-      />
-
-      <div 
-        className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isPlaying ? 'opacity-0' : 'opacity-100'} bg-black bg-opacity-30`}
-        style={{ pointerEvents: isPlaying ? 'none' : 'auto' }}
-      >
-        {!isPlaying && (
-          <button onClick={togglePlayPause} aria-label="Play video" className="p-4 bg-white/10 rounded-full backdrop-blur-sm hover:bg-white/20 transition-colors">
-              <PlayIcon className="w-12 h-12 text-white" />
-          </button>
-        )}
+    <div ref={containerRef} className="relative w-full h-full group bg-black overflow-hidden" onMouseMove={showControls}>
+      <video ref={backgroundVideoRef} src={src} className="absolute top-0 left-0 w-full h-full object-cover blur-2xl scale-110 brightness-50 pointer-events-none" muted />
+      <video ref={videoRef} src={src} className={`relative w-full h-full transition-all duration-300 ${fitMode === 'contain' ? 'object-contain' : 'object-cover'}`} onClick={togglePlayPause} onLoadedData={showControls} />
+      <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isPlaying ? 'opacity-0' : 'opacity-100'} bg-black/30`} style={{ pointerEvents: isPlaying ? 'none' : 'auto' }}>
+        {!isPlaying && <button onClick={togglePlayPause} aria-label="Play" className="p-4 bg-white/10 rounded-full backdrop-blur-sm hover:bg-white/20 transition-colors"><PlayIcon className="w-12 h-12 text-white" /></button>}
       </div>
-
-      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${areControlsVisible ? 'opacity-100' : 'opacity-0'}`}
-          style={{ pointerEvents: areControlsVisible ? 'auto' : 'none' }}>
-        <div className="p-4 space-y-2">
+      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${areControlsVisible ? 'opacity-100' : 'opacity-0'}`} style={{ pointerEvents: areControlsVisible ? 'auto' : 'none' }}>
+        <div className="p-2 sm:p-4 space-y-2">
             <div className="flex items-center space-x-2">
                 <span className="text-xs font-mono">{formatTime(progress)}</span>
-                <input
-                    type="range"
-                    min="0"
-                    max={duration || 0}
-                    value={progress}
-                    onChange={handleProgressChange}
-                    className="w-full h-1.5 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-cyan-500"
-                    aria-label="Video progress slider"
-                />
+                <input type="range" min="0" max={duration || 0} value={progress} onChange={handleProgressChange} className="w-full h-1.5 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-teal-400" aria-label="Video progress"/>
                 <span className="text-xs font-mono">{formatTime(duration)}</span>
             </div>
             <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-4">
-                    <button 
-                        onClick={onPrevious} 
-                        aria-label="Previous video" 
-                        className="text-white hover:text-cyan-400 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed"
-                        disabled={playlistLength <= 1}
-                    >
-                        <PreviousIcon className="w-6 h-6" />
-                    </button>
-                    <button onClick={togglePlayPause} aria-label={isPlaying ? 'Pause video' : 'Play video'} className="text-white hover:text-cyan-400 transition-colors">
-                        {isPlaying ? <PauseIcon className="w-6 h-6" /> : <PlayIcon className="w-6 h-6" />}
-                    </button>
-                    <button 
-                        onClick={onNext} 
-                        aria-label="Next video" 
-                        className="text-white hover:text-cyan-400 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed"
-                        disabled={playlistLength <= 1}
-                    >
-                        <NextIcon className="w-6 h-6" />
-                    </button>
-                    <div className="flex items-center space-x-2 w-28">
-                        <button onClick={toggleMute} aria-label={isMuted || volume === 0 ? 'Unmute' : 'Mute'} className="text-white hover:text-cyan-400 transition-colors">
-                            {isMuted || volume === 0 ? <VolumeMuteIcon className="w-6 h-6"/> : <VolumeHighIcon className="w-6 h-6"/>}
-                        </button>
-                        <input
-                            type="range"
-                            min="0"
-                            max="1"
-                            step="0.01"
-                            value={isMuted ? 0 : volume}
-                            onChange={handleVolumeChange}
-                            className="w-full h-1 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-cyan-500"
-                            aria-label="Volume slider"
-                        />
+                <div className="flex items-center space-x-2 sm:space-x-4">
+                    <button onClick={onPrevious} aria-label="Previous" className="text-white hover:text-teal-300 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed" disabled={playlistLength <= 1}><PreviousIcon className="w-6 h-6" /></button>
+                    <button onClick={togglePlayPause} aria-label={isPlaying ? 'Pause' : 'Play'} className="text-white hover:text-teal-300 transition-colors">{isPlaying ? <PauseIcon className="w-6 h-6" /> : <PlayIcon className="w-6 h-6" />}</button>
+                    <button onClick={onNext} aria-label="Next" className="text-white hover:text-teal-300 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed" disabled={playlistLength <= 1}><NextIcon className="w-6 h-6" /></button>
+                    <div className="flex items-center space-x-2 w-24 sm:w-28">
+                        <button onClick={toggleMute} aria-label={isMuted || volume === 0 ? 'Unmute' : 'Mute'} className="text-white hover:text-teal-300 transition-colors">{isMuted || volume === 0 ? <VolumeMuteIcon className="w-6 h-6"/> : <VolumeHighIcon className="w-6 h-6"/>}</button>
+                        <input type="range" min="0" max="1" step="0.01" value={isMuted ? 0 : volume} onChange={handleVolumeChange} className="w-full h-1 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-teal-400" aria-label="Volume"/>
                     </div>
                 </div>
-                 <div className="flex items-center space-x-4">
-                     <p className="text-sm text-gray-300 truncate max-w-[100px] sm:max-w-xs" title={title}>{title}</p>
-                     <button onClick={toggleFitMode} aria-label={fitMode === 'contain' ? 'Fill screen' : 'Fit to screen'} className="text-white hover:text-cyan-400 transition-colors">
-                        <AspectRatioIcon className="w-6 h-6" />
-                    </button>
-                     <button onClick={toggleFullScreen} aria-label={isFullScreen ? 'Exit full screen' : 'Enter full screen'} className="text-white hover:text-cyan-400 transition-colors">
-                        {isFullScreen ? <ExitFullScreenIcon className="w-6 h-6" /> : <EnterFullScreenIcon className="w-6 h-6" />}
-                    </button>
+                 <div className="flex items-center space-x-2 sm:space-x-4">
+                     <p className="text-sm text-gray-300 truncate max-w-[80px] sm:max-w-xs" title={title}>{title}</p>
+                     <button onClick={toggleFitMode} aria-label={fitMode === 'contain' ? 'Fill' : 'Fit'} className="text-white hover:text-teal-300 transition-colors"><AspectRatioIcon className="w-6 h-6" /></button>
+                     <button onClick={toggleFullScreen} aria-label={isFullScreen ? 'Exit full screen' : 'Enter full screen'} className="text-white hover:text-teal-300 transition-colors">{isFullScreen ? <ExitFullScreenIcon className="w-6 h-6" /> : <EnterFullScreenIcon className="w-6 h-6" />}</button>
                 </div>
             </div>
         </div>
