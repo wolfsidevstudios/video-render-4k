@@ -8,6 +8,7 @@ import { ExitFullScreenIcon } from './icons/ExitFullScreenIcon';
 import { NextIcon } from './icons/NextIcon';
 import { PreviousIcon } from './icons/PreviousIcon';
 import { AspectRatioIcon } from './icons/AspectRatioIcon';
+import { FeedIcon } from './icons/FeedIcon';
 
 interface VideoPlayerProps {
   src: string;
@@ -17,6 +18,7 @@ interface VideoPlayerProps {
   onPrevious: () => void;
   currentIndex: number;
   playlistLength: number;
+  itemType: 'video' | 'image';
 }
 
 const VideoPlayer: React.FC<VideoPlayerProps> = ({ 
@@ -26,7 +28,8 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onNext,
   onPrevious,
   currentIndex,
-  playlistLength
+  playlistLength,
+  itemType
 }) => {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [progress, setProgress] = useState<number>(0);
@@ -36,6 +39,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [areControlsVisible, setAreControlsVisible] = useState<boolean>(true);
   const [fitMode, setFitMode] = useState<'contain' | 'cover'>('contain');
+  const [fullscreenView, setFullscreenView] = useState<'default' | 'feed'>('default');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const backgroundVideoRef = useRef<HTMLVideoElement>(null);
@@ -82,7 +86,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     const handleLoadedMetadata = () => setDuration(video.duration);
     const handlePlay = () => { setIsPlaying(true); bgVideo.play(); };
     const handlePause = () => { setIsPlaying(false); bgVideo.pause(); };
-    const handleFullscreenChange = () => setIsFullScreen(!!document.fullscreenElement);
+    const handleFullscreenChange = () => {
+      const isFs = !!document.fullscreenElement;
+      setIsFullScreen(isFs);
+      if (!isFs) {
+        setFullscreenView('default'); // Reset on exit
+      }
+    };
 
     video.addEventListener('timeupdate', handleTimeUpdate);
     video.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -152,36 +162,63 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     showControls();
   };
   
+  const toggleFeedMode = () => {
+    setFullscreenView(prev => prev === 'default' ? 'feed' : 'default');
+    showControls();
+  };
+
   return (
-    <div ref={containerRef} className="relative w-full h-full group bg-black overflow-hidden" onMouseMove={showControls}>
-      <video ref={backgroundVideoRef} src={src} className="absolute top-0 left-0 w-full h-full object-cover blur-2xl scale-110 brightness-50 pointer-events-none" muted />
-      <video ref={videoRef} src={src} className={`relative w-full h-full transition-all duration-300 ${fitMode === 'contain' ? 'object-contain' : 'object-cover'}`} onClick={togglePlayPause} onLoadedData={showControls} />
-      <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isPlaying ? 'opacity-0' : 'opacity-100'} bg-black/30`} style={{ pointerEvents: isPlaying ? 'none' : 'auto' }}>
-        {!isPlaying && <button onClick={togglePlayPause} aria-label="Play" className="p-4 bg-white/10 rounded-full backdrop-blur-sm hover:bg-white/20 transition-colors"><PlayIcon className="w-12 h-12 text-white" /></button>}
-      </div>
-      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${areControlsVisible ? 'opacity-100' : 'opacity-0'}`} style={{ pointerEvents: areControlsVisible ? 'auto' : 'none' }}>
-        <div className="p-2 sm:p-4 space-y-2">
-            <div className="flex items-center space-x-2">
-                <span className="text-xs font-mono">{formatTime(progress)}</span>
-                <input type="range" min="0" max={duration || 0} value={progress} onChange={handleProgressChange} className="w-full h-1.5 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-teal-400" aria-label="Video progress"/>
-                <span className="text-xs font-mono">{formatTime(duration)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-                <div className="flex items-center space-x-2 sm:space-x-4">
-                    <button onClick={onPrevious} aria-label="Previous" className="text-white hover:text-teal-300 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed" disabled={playlistLength <= 1}><PreviousIcon className="w-6 h-6" /></button>
-                    <button onClick={togglePlayPause} aria-label={isPlaying ? 'Pause' : 'Play'} className="text-white hover:text-teal-300 transition-colors">{isPlaying ? <PauseIcon className="w-6 h-6" /> : <PlayIcon className="w-6 h-6" />}</button>
-                    <button onClick={onNext} aria-label="Next" className="text-white hover:text-teal-300 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed" disabled={playlistLength <= 1}><NextIcon className="w-6 h-6" /></button>
-                    <div className="flex items-center space-x-2 w-24 sm:w-28">
-                        <button onClick={toggleMute} aria-label={isMuted || volume === 0 ? 'Unmute' : 'Mute'} className="text-white hover:text-teal-300 transition-colors">{isMuted || volume === 0 ? <VolumeMuteIcon className="w-6 h-6"/> : <VolumeHighIcon className="w-6 h-6"/>}</button>
-                        <input type="range" min="0" max="1" step="0.01" value={isMuted ? 0 : volume} onChange={handleVolumeChange} className="w-full h-1 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-teal-400" aria-label="Volume"/>
-                    </div>
-                </div>
-                 <div className="flex items-center space-x-2 sm:space-x-4">
-                     <p className="text-sm text-gray-300 truncate max-w-[80px] sm:max-w-xs" title={title}>{title}</p>
-                     <button onClick={toggleFitMode} aria-label={fitMode === 'contain' ? 'Fill' : 'Fit'} className="text-white hover:text-teal-300 transition-colors"><AspectRatioIcon className="w-6 h-6" /></button>
-                     <button onClick={toggleFullScreen} aria-label={isFullScreen ? 'Exit full screen' : 'Enter full screen'} className="text-white hover:text-teal-300 transition-colors">{isFullScreen ? <ExitFullScreenIcon className="w-6 h-6" /> : <EnterFullScreenIcon className="w-6 h-6" />}</button>
-                </div>
-            </div>
+    <div 
+      ref={containerRef} 
+      className={`relative w-full h-full group bg-black overflow-hidden ${isFullScreen && fullscreenView === 'feed' ? 'flex items-center justify-center' : ''}`} 
+      onMouseMove={showControls}
+    >
+      <div className={`relative transition-all duration-300 ${isFullScreen && fullscreenView === 'feed' ? 'h-full aspect-[9/16]' : 'w-full h-full'}`}>
+        <video ref={backgroundVideoRef} src={src} className="absolute top-0 left-0 w-full h-full object-cover blur-2xl scale-110 brightness-50 pointer-events-none" muted />
+        <video 
+          ref={videoRef} 
+          src={src} 
+          className={`relative w-full h-full transition-all duration-300 ${ (isFullScreen && fullscreenView === 'feed') || fitMode === 'cover' ? 'object-cover' : 'object-contain' }`} 
+          onClick={togglePlayPause} 
+          onLoadedData={showControls} 
+        />
+        <div className={`absolute inset-0 flex items-center justify-center transition-opacity duration-300 ${isPlaying ? 'opacity-0' : 'opacity-100'} bg-black/30`} style={{ pointerEvents: isPlaying ? 'none' : 'auto' }}>
+          {!isPlaying && <button onClick={togglePlayPause} aria-label="Play" className="p-4 bg-white/10 rounded-full backdrop-blur-sm hover:bg-white/20 transition-colors"><PlayIcon className="w-12 h-12 text-white" /></button>}
+        </div>
+        <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${areControlsVisible ? 'opacity-100' : 'opacity-0'}`} style={{ pointerEvents: areControlsVisible ? 'auto' : 'none' }}>
+          <div className="p-2 sm:p-4 space-y-2">
+              <div className="flex items-center space-x-2">
+                  <span className="text-xs font-mono">{formatTime(progress)}</span>
+                  <input type="range" min="0" max={duration || 0} value={progress} onChange={handleProgressChange} className="w-full h-1.5 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-teal-400" aria-label="Video progress"/>
+                  <span className="text-xs font-mono">{formatTime(duration)}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                  <div className="flex items-center space-x-2 sm:space-x-4">
+                      <button onClick={onPrevious} aria-label="Previous" className="text-white hover:text-teal-300 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed" disabled={playlistLength <= 1}><PreviousIcon className="w-6 h-6" /></button>
+                      <button onClick={togglePlayPause} aria-label={isPlaying ? 'Pause' : 'Play'} className="text-white hover:text-teal-300 transition-colors">{isPlaying ? <PauseIcon className="w-6 h-6" /> : <PlayIcon className="w-6 h-6" />}</button>
+                      <button onClick={onNext} aria-label="Next" className="text-white hover:text-teal-300 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed" disabled={playlistLength <= 1}><NextIcon className="w-6 h-6" /></button>
+                      <div className="flex items-center space-x-2 w-24 sm:w-28">
+                          <button onClick={toggleMute} aria-label={isMuted || volume === 0 ? 'Unmute' : 'Mute'} className="text-white hover:text-teal-300 transition-colors">{isMuted || volume === 0 ? <VolumeMuteIcon className="w-6 h-6"/> : <VolumeHighIcon className="w-6 h-6"/>}</button>
+                          <input type="range" min="0" max="1" step="0.01" value={isMuted ? 0 : volume} onChange={handleVolumeChange} className="w-full h-1 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-teal-400" aria-label="Volume"/>
+                      </div>
+                  </div>
+                   <div className="flex items-center space-x-2 sm:space-x-4">
+                       <p className="text-sm text-gray-300 truncate max-w-[80px] sm:max-w-xs" title={title}>{title}</p>
+                       
+                       {!(isFullScreen && fullscreenView === 'feed') &&
+                         <button onClick={toggleFitMode} aria-label={fitMode === 'contain' ? 'Fill' : 'Fit'} className="text-white hover:text-teal-300 transition-colors"><AspectRatioIcon className="w-6 h-6" /></button>
+                       }
+
+                       {isFullScreen && itemType === 'video' && (
+                          <button onClick={toggleFeedMode} aria-label={fullscreenView === 'default' ? 'Enter Feed View' : 'Exit Feed View'} className={`transition-colors ${fullscreenView === 'feed' ? 'text-teal-400' : 'text-white hover:text-teal-300'}`}>
+                            <FeedIcon className="w-6 h-6" />
+                          </button>
+                       )}
+
+                       <button onClick={toggleFullScreen} aria-label={isFullScreen ? 'Exit full screen' : 'Enter full screen'} className="text-white hover:text-teal-300 transition-colors">{isFullScreen ? <ExitFullScreenIcon className="w-6 h-6" /> : <EnterFullScreenIcon className="w-6 h-6" />}</button>
+                  </div>
+              </div>
+          </div>
         </div>
       </div>
     </div>

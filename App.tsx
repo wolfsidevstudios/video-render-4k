@@ -177,6 +177,7 @@ const App: React.FC = () => {
                     src={currentItem.src} title={currentItem.title} onEnded={handleNext}
                     onNext={handleNext} onPrevious={handlePrevious}
                     currentIndex={currentIndex} playlistLength={playlist.length}
+                    itemType={currentItem.type}
                   />
                 ) : (
                   <ImageViewer src={currentItem.src} title={currentItem.title} onEnded={handleNext} />
