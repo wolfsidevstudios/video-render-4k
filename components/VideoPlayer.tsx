@@ -7,6 +7,7 @@ import { EnterFullScreenIcon } from './icons/EnterFullScreenIcon';
 import { ExitFullScreenIcon } from './icons/ExitFullScreenIcon';
 import { NextIcon } from './icons/NextIcon';
 import { PreviousIcon } from './icons/PreviousIcon';
+import { AspectRatioIcon } from './icons/AspectRatioIcon';
 
 interface VideoPlayerProps {
   src: string;
@@ -34,6 +35,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const [duration, setDuration] = useState<number>(0);
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [areControlsVisible, setAreControlsVisible] = useState<boolean>(true);
+  const [fitMode, setFitMode] = useState<'contain' | 'cover'>('contain');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const backgroundVideoRef = useRef<HTMLVideoElement>(null);
@@ -188,6 +190,11 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         document.exitFullscreen();
     }
   };
+
+  const toggleFitMode = () => {
+    setFitMode(prev => prev === 'contain' ? 'cover' : 'contain');
+    showControls();
+  };
   
   return (
     <div 
@@ -204,7 +211,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       <video
         ref={videoRef}
         src={src}
-        className="relative w-full h-full object-contain"
+        className={`relative w-full h-full transition-all duration-300 ${fitMode === 'contain' ? 'object-contain' : 'object-cover'}`}
         onClick={togglePlayPause}
         onLoadedData={() => showControls()}
       />
@@ -220,7 +227,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
         )}
       </div>
 
-      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent transition-opacity duration-300 ${areControlsVisible ? 'opacity-100' : 'opacity-0'}`}
+      <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300 ${areControlsVisible ? 'opacity-100' : 'opacity-0'}`}
           style={{ pointerEvents: areControlsVisible ? 'auto' : 'none' }}>
         <div className="p-4 space-y-2">
             <div className="flex items-center space-x-2">
@@ -231,7 +238,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     max={duration || 0}
                     value={progress}
                     onChange={handleProgressChange}
-                    className="w-full h-1.5 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-indigo-500"
+                    className="w-full h-1.5 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-cyan-500"
                     aria-label="Video progress slider"
                 />
                 <span className="text-xs font-mono">{formatTime(duration)}</span>
@@ -241,24 +248,24 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                     <button 
                         onClick={onPrevious} 
                         aria-label="Previous video" 
-                        className="text-white hover:text-indigo-400 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed"
+                        className="text-white hover:text-cyan-400 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed"
                         disabled={playlistLength <= 1}
                     >
                         <PreviousIcon className="w-6 h-6" />
                     </button>
-                    <button onClick={togglePlayPause} aria-label={isPlaying ? 'Pause video' : 'Play video'} className="text-white hover:text-indigo-400 transition-colors">
+                    <button onClick={togglePlayPause} aria-label={isPlaying ? 'Pause video' : 'Play video'} className="text-white hover:text-cyan-400 transition-colors">
                         {isPlaying ? <PauseIcon className="w-6 h-6" /> : <PlayIcon className="w-6 h-6" />}
                     </button>
                     <button 
                         onClick={onNext} 
                         aria-label="Next video" 
-                        className="text-white hover:text-indigo-400 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed"
+                        className="text-white hover:text-cyan-400 transition-colors disabled:text-gray-500 disabled:cursor-not-allowed"
                         disabled={playlistLength <= 1}
                     >
                         <NextIcon className="w-6 h-6" />
                     </button>
                     <div className="flex items-center space-x-2 w-28">
-                        <button onClick={toggleMute} aria-label={isMuted || volume === 0 ? 'Unmute' : 'Mute'} className="text-white hover:text-indigo-400 transition-colors">
+                        <button onClick={toggleMute} aria-label={isMuted || volume === 0 ? 'Unmute' : 'Mute'} className="text-white hover:text-cyan-400 transition-colors">
                             {isMuted || volume === 0 ? <VolumeMuteIcon className="w-6 h-6"/> : <VolumeHighIcon className="w-6 h-6"/>}
                         </button>
                         <input
@@ -268,14 +275,17 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
                             step="0.01"
                             value={isMuted ? 0 : volume}
                             onChange={handleVolumeChange}
-                            className="w-full h-1 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-indigo-500"
+                            className="w-full h-1 bg-gray-500/50 rounded-full appearance-none cursor-pointer accent-cyan-500"
                             aria-label="Volume slider"
                         />
                     </div>
                 </div>
                  <div className="flex items-center space-x-4">
                      <p className="text-sm text-gray-300 truncate max-w-[100px] sm:max-w-xs" title={title}>{title}</p>
-                     <button onClick={toggleFullScreen} aria-label={isFullScreen ? 'Exit full screen' : 'Enter full screen'} className="text-white hover:text-indigo-400 transition-colors">
+                     <button onClick={toggleFitMode} aria-label={fitMode === 'contain' ? 'Fill screen' : 'Fit to screen'} className="text-white hover:text-cyan-400 transition-colors">
+                        <AspectRatioIcon className="w-6 h-6" />
+                    </button>
+                     <button onClick={toggleFullScreen} aria-label={isFullScreen ? 'Exit full screen' : 'Enter full screen'} className="text-white hover:text-cyan-400 transition-colors">
                         {isFullScreen ? <ExitFullScreenIcon className="w-6 h-6" /> : <EnterFullScreenIcon className="w-6 h-6" />}
                     </button>
                 </div>
