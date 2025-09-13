@@ -147,16 +147,16 @@ const App: React.FC = () => {
   const currentItem = playlist[currentIndex];
 
   if (!isReady) {
-    return <div className="bg-slate-950 min-h-screen flex items-center justify-center text-white"><p>Loading...</p></div>;
+    return <div className="bg-black min-h-screen flex items-center justify-center text-white"><p>Loading...</p></div>;
   }
 
   return (
     <main 
-      className="bg-slate-950 min-h-screen text-white font-sans"
+      className="bg-black min-h-screen text-white font-sans"
       onDrop={handleDrop} onDragOver={handleDragOver} onDragEnter={handleDragEnter} onDragLeave={handleDragLeave}
     >
       {isDragging && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-md flex items-center justify-center z-50 pointer-events-none">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center z-50 pointer-events-none">
           <div className="text-center p-8 border-2 border-dashed border-teal-400 rounded-2xl">
             <h2 className="text-2xl font-bold text-teal-300">Drop files to upload</h2>
           </div>
@@ -170,7 +170,7 @@ const App: React.FC = () => {
             </h1>
           </header>
           <div className="flex-grow flex items-center justify-center min-h-0">
-            <div className="aspect-video w-full max-w-full rounded-lg overflow-hidden shadow-2xl shadow-teal-500/10 border border-slate-700 bg-black">
+            <div className="aspect-video w-full max-w-full rounded-lg overflow-hidden shadow-2xl shadow-teal-500/10 border border-gray-800 bg-black">
               {currentItem ? (
                 currentItem.type === 'video' ? (
                   <VideoPlayer 
@@ -193,16 +193,16 @@ const App: React.FC = () => {
           </div>
         </div>
         
-        <aside className="lg:w-1/3 flex flex-col bg-slate-900/70 border-t-2 lg:border-t-0 lg:border-l-2 border-slate-700">
+        <aside className="lg:w-1/3 flex flex-col bg-gray-950/50 backdrop-blur-sm border-t-2 lg:border-t-0 lg:border-l-2 border-gray-800">
           {/* Desktop View */}
           <div className="hidden lg:flex flex-col h-full p-4 space-y-4">
-            <label htmlFor="file-upload-desktop" className="w-full text-center cursor-pointer bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg transition-transform transform hover:scale-105 flex items-center justify-center">
+            <label htmlFor="file-upload-desktop" className="w-full text-center cursor-pointer bg-teal-500/20 hover:bg-teal-500/40 border border-teal-500/40 text-white font-bold py-3 px-6 rounded-full shadow-lg transition-all transform hover:scale-105 flex items-center justify-center">
                 Add Files
             </label>
             <input id="file-upload-desktop" type="file" accept="video/*,image/*" multiple onChange={handleFileUpload} className="hidden" />
             <Playlist videos={playlist} currentIndex={currentIndex} onSelectVideo={handleSelectVideo} title="Up Next"/>
-            <div className="mt-auto flex-shrink-0 pt-4 border-t border-slate-700">
-               <button onClick={handleClearPlaylist} disabled={playlist.length === 0} className="w-full text-center bg-red-800/80 hover:bg-red-700 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-lg transition-colors">
+            <div className="mt-auto flex-shrink-0 pt-4 border-t border-gray-800">
+               <button onClick={handleClearPlaylist} disabled={playlist.length === 0} className="w-full text-center bg-red-500/20 hover:bg-red-500/40 border border-red-500/40 disabled:bg-gray-800/50 disabled:border-gray-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-2 px-4 rounded-full transition-colors">
                   Clear Playlist
                </button>
             </div>

@@ -19,7 +19,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
     playlistEmpty
 }) => {
     return (
-        <div className="flex-shrink-0 border-b-2 border-slate-700">
+        <div className="flex-shrink-0 border-b-2 border-gray-800">
             <div className="flex">
                 <TabButton 
                     label="Playlist" 
@@ -35,8 +35,8 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                 />
             </div>
              {activeTab === 'actions' && (
-                <div className="p-4 bg-slate-800/50 flex flex-col sm:flex-row gap-4">
-                    <label htmlFor="file-upload-mobile" className="flex-1 text-center cursor-pointer bg-gradient-to-r from-teal-500 to-cyan-600 hover:from-teal-600 hover:to-cyan-700 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-transform transform hover:scale-105 flex items-center justify-center">
+                <div className="p-4 bg-gray-900/50 flex flex-col sm:flex-row gap-4">
+                    <label htmlFor="file-upload-mobile" className="flex-1 text-center cursor-pointer bg-teal-500/20 hover:bg-teal-500/40 border border-teal-500/40 text-white font-bold py-3 px-4 rounded-full shadow-lg transition-all transform hover:scale-105 flex items-center justify-center">
                         <PlusIcon className="w-5 h-5 mr-2" />
                         Add Files
                     </label>
@@ -45,7 +45,7 @@ export const MobileControls: React.FC<MobileControlsProps> = ({
                     <button 
                         onClick={onClearPlaylist} 
                         disabled={playlistEmpty} 
-                        className="flex-1 text-center bg-red-800/80 hover:bg-red-700 disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+                        className="flex-1 text-center bg-red-500/20 hover:bg-red-500/40 border border-red-500/40 disabled:bg-gray-800/50 disabled:border-gray-700 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-full transition-colors flex items-center justify-center"
                     >
                          <TrashIcon className="w-5 h-5 mr-2" />
                          Clear Playlist
@@ -61,8 +61,8 @@ const TabButton: React.FC<{label: string, icon: React.ReactNode, isActive: boole
         onClick={onClick}
         className={`flex-1 flex items-center justify-center gap-2 p-3 font-semibold transition-colors ${
             isActive 
-            ? 'bg-slate-800 text-teal-300 border-b-2 border-teal-400' 
-            : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'
+            ? 'bg-gray-900 text-teal-300 border-b-2 border-teal-400' 
+            : 'text-slate-400 hover:bg-gray-900/50 hover:text-white'
         }`}
         aria-selected={isActive}
     >

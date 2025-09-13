@@ -12,7 +12,7 @@ interface PlaylistProps {
 
 const Playlist: React.FC<PlaylistProps> = ({ videos, currentIndex, onSelectVideo, title }) => {
   return (
-    <div className="bg-slate-800/30 rounded-lg p-2 sm:p-4 h-full flex-grow overflow-y-auto border border-slate-700/50">
+    <div className="bg-black/20 rounded-lg p-2 sm:p-4 h-full flex-grow overflow-y-auto border border-gray-800">
         {title && <h2 className="text-lg font-bold text-slate-200 mb-4 px-2">{title}</h2>}
         {videos.length > 0 ? (
             <ul className="space-y-2">
